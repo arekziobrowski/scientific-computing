@@ -1,0 +1,298 @@
+\documentclass[a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{titling}
+\usepackage[polish]{babel}
+\usepackage{multirow}
+\selectlanguage{polish}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{framed}
+\usepackage{fullpage}
+\usepackage{adjustbox}
+\usepackage{algpseudocode}
+\usepackage{amsthm}
+
+
+\setlength{\droptitle}{+10em}
+\title{\huge
+  Obliczenia naukowe \\
+  \large Lista 5}
+\author{Arkadiusz Ziobrowski \\ 229728}
+\date{}
+
+\begin{document}
+\maketitle
+
+\pagebreak
+
+
+\section*{Wprowadzenie}
+\paragraph{}
+Rozwiązania poniższych zadań uwzględniają specyficzną postać macierzy wejściowej $\mathbf{A}$:
+
+\begin{center}
+$\mathbf{
+	A = 
+ 	\begin{pmatrix}
+ 	A_{1} & C_{1} & 0 & 0 & 0 & \cdots & 0 \\
+  	B_{2} & A_{2} & C_{2} & 0 & 0 & \cdots & 0 \\
+  	0 & B_{3} & A_{3} & C_{3} & 0 & \cdots & 0 \\ 
+  	\vdots  & \ddots  & \ddots & \ddots & \ddots & \ddots & \vdots  \\
+  	0 & \cdots & 0 & B_{v - 2} & A_{v - 2} & C_{v - 2} & 0 \\
+  	0 & \cdots & 0 & 0 & B_{v - 1} & A_{v - 1} & C_{v - 1} \\
+  	0 & \cdots & 0 & 0 & 0 & B_{v} & A_{v} \\
+ 	\end{pmatrix}
+ }$
+\end{center}
+
+Macierz $\mathbf{A}$ jest macierzą rzadką i blokową o powyższej strukturze, gdzie $v = n / l$, przy założeniu, że $n \geq 4$ jest podzielne przez rozmiar bloków $l \geq 2$. Ponadto bloki macierzy $\mathbf{A}$ mają dla $k = 2, ..., v$ następujące postaci:
+
+\begin{center}
+\begin{itemize}
+	\item $\mathbf{A_{k}}$ jest kwadratową macierzą gęstą.
+	\item $\mathbf{0}$ jest kwadratową macierzą zerową stopnia $l$.
+	\item $\mathbf{B_{k}}$ jest kwadratową macierzą, w której tylko dwie ostatnie kolumny są niezerowe, to jest:
+	\begin{center}
+	$\mathbf{
+		B_{k} = 
+ 		\begin{pmatrix}
+ 		0 & \cdots & 0 & b^{k}_{1, l - 1} & b^{k}_{1, l} \\
+ 		0 & \cdots & 0 & b^{k}_{2, l - 1} & b^{k}_{2, l} \\
+ 		\vdots & & \vdots & \vdots & \vdots \\
+ 		0 & \cdots & 0 & b^{k}_{l, l - 1} & b^{k}_{l, l} \\
+ 		\end{pmatrix}
+ 	}$
+	\end{center}
+	\item $\mathbf{C_{k}}$ jest kwadratową macierzą diagonalną, to jest:
+	\begin{center}
+	$\mathbf{
+		C_{k} = 
+ 		\begin{pmatrix}
+ 		c^{k}_{1} & 0 & 0 & \cdots & 0 \\
+ 		0 & c^{k}_{2} & 0 & \cdots & 0 \\
+ 		\vdots & \ddots & \ddots & \ddots & \vdots \\
+ 		0 & \cdots & 0 & c^{k}_{l - 1} & 0 \\
+ 		0 & \cdots & 0 & 0 & c^{k}_{l} \\
+ 		\end{pmatrix}
+ 	}$
+	\end{center}
+\end{itemize}
+\end{center}
+
+
+
+Dla przedstawionej powyżej postaci macierzy zostały zaadaptowane standardowe algorytmy, które dzięki uwzględnieniu w nich rzadkości i regularności występowania elementów zerowych i niezerowych, wynikających z blokowo-taśmowej postaci macierzy, mogły zostać zoptymalizowane dla konkretnych problemów związanych z zadaną macierzą.
+
+\section{Zadanie pierwsze}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania była implementacja funkcji rozwiązującej układ $\mathbf{Ax = b}$ metodą eliminacji Gaussa, uwzględniającą specyficzną postać macierzy $\mathbf{A}$ dla wariantów bez wyboru elementu głównego oraz z częściowym wyborem elementu głównego.
+\subsection{Rozwiązanie}
+\subsubsection{Algorytm}
+\paragraph{}
+Metoda eliminacji Gaussa polega na stopniowej eliminacji niewiadomych tak, aby układ równań liniowych $\mathbf{Ax = b}$ zastąpić równoważnym mu układem $\mathbf{Ux = c}$ z macierzą trójkątną górną $\mathbf{U}$. Nowy układ można łatwo rozwiązać, wyznaczając niewiadome od ostatniej do pierwszej. Wariant bez wyboru elementu głównego zakłada, że elementem głównym w $k$-tym kroku jest element $a_{k k}$ macierzy $\mathbf{A}$, zaś wariant z częściowym wyborem elementu głównego zakłada, że jako element główny zostanie wybrana wartość największa co do skali rzędu w kolumnie $k$-tej. Różnice między tymi wariantami zostaną opisane dokładniej w dalszej części tej podsekcji.
+
+\paragraph{}
+W $k$-tym kroku eliminujemy zmienną $x_{k}$ z równań od $(k + 1)$-go do $n$-tego poprzez odjęcie pierwszego równania pomnożonego przez
+\begin{equation}
+l_{i k} = \frac{a^{(1)}_{i k}}{a^{(1)}_{k k}} \quad dla \quad i = k + 1, ... n
+\end{equation}  od reszty.
+Uwzględniając blokowo-taśmową postać macierzy $\mathbf{A}$ nie będzie trzeba jednak wykonać $n - k$ mnożeń i odejmowań. Wykorzystując regularność występowania elementów niezerowych w $k$-tym kroku dla $k = 1, ..., n - 2$ algorytmu wystarczy wykonać operacje dla $l -  (k \mod l)$ równań, gdy $k \mod l \leq l - 2$ lub dla $2l - (k \mod l)$ równań w przeciwnym przypadku. W ostatnich dwóch krokach trzeba wykonać $l -  (k \mod l)$ operacji. Wynika to ze specyficznej postaci macierzy $\mathbf{A}$, która dla bloków o indeksach $i = 1, ..., v - 1$ wymaga większej ilości operacji dla ostatnich dwóch kolumn bloku $\mathbf{A_{i}}$, gdyż znajdująca się pod blokiem macierz $\mathbf{B_{i + 1}}$ ma niezerowe wyłącznie dwie ostatnie kolumny.
+
+\paragraph{}
+Obserwacją, która pomaga zaadaptować algorytm pod specyficzne dane wejściowe i zmniejszyć złożoność metody eliminacji Gaussa jest również ilość współczynników w rzędzie macierzy $\mathbf{A}$, które musimy przemnożyć i odjąć. Dla podstawowej wersji algorytmu Gaussa należy w $k$-tym kroku przemnożyć $n - k$ współczynników przez $l_{i k}$ dla $i = k + 1, ..., n$, a następnie odjąć je od $n - k$ współczynników w rzędach poniżej $k$-tego. Postać macierzy $\mathbf{A}$ pozwala jednak na działanie na co najwyżej $l + 1$ współczynnikach dla wariantu bez wyboru elementu głównego oraz na co najwyżej $2*l + 1$ współczynnikach dla wariantu z częściowym wyborem elementu głównego, co wynika z regularności w blokach $\mathbf{A_{i}}$ oraz postaci diagonalnej bloku $\mathbf{C_{i}}$. W wariancie z częściowym wyborem elementu głównego większy zakres wynika z permutacji rzędów, a co za tym idzie możliwego przesunięcia najdalszego co do indeksu kolumny niezerowego elementu o maksymalnie $l$ kolumn.
+
+\paragraph{}
+Po pierwszym kroku macierz $\mathbf{A}$ będzie wyglądać następująco:
+\begin{center}
+$\mathbf{
+		A^{(2)} = 
+ 		\begin{pmatrix}
+ 		a_{1 1} & a_{1 2} & \cdots & 0 & 0 & 0 \\
+ 		0 & a'_{2 2} & \cdots & 0 & 0 & 0 \\
+ 		0 & a'_{3 2} & \cdots & 0 & 0 & 0 \\
+ 		\vdots & \vdots & \ddots & 0 & 0 & 0 \\
+ 		0 & a'_{l 2} & \cdots & 0 & 0 & 0 \\
+ 		\vdots & \ddots & \ddots & \ddots & \ddots & \vdots \\
+ 		0 & 0 & 0 & \cdots & a_{n n-1} & a_{n n}\\	
+ 		\end{pmatrix}
+ 	}$
+\end{center}
+
+Pierwsza kolumna została wyzerowana poniżej pierwszego rzędu, co odpowiada wyeliminowaniu zmiennej $x_{1}$ z równań od drugiego do $n$-tego. Pierwszy rząd nie zmienił się, zaś wartości w kolumnach w pozostałych $l$ pierwszych rzędach zostały pomniejszone o $l_{i 1} * a_{1 j}$. Po $n$ krokach algorytmu macierz $\mathbf{A}$ zostanie sprowadzona do postaci macierzy trójkątnej górnej.
+
+\paragraph{}
+W czasie wykonywania algorytmu ważne jest również aktualizowanie wektora prawych stron $\mathbf{b}$ w celu zachowania równoważności układu równań. Przy odejmowaniu rzędów w macierzy $\mathbf{A}$ należy odjąć odpowiadające im rzędy wektora $\mathbf{b}$, przy czym odjemnik musi być pomnożony przez wartość $l_{i k}$.
+
+\paragraph{}
+Po sprowadzeniu układu $\mathbf{Ax = b}$ do równoważnego mu układu $\mathbf{Ux = c}$ z macierzą górnotrójkątną $\mathbf{U}$ jesteśmy w stanie łatwo wyznaczyć niewiadome od ostatniej do pierwszej:
+\begin{equation}
+\begin{split}
+x_{n} = \frac{b_{n}}{\mathbf{U_{n n}}}\\
+x_{k} = \frac{b_{k} - \sum_{j=k+1}^{\min(n, k + l)} \mathbf{U_{k j}}*x_{j}}{\mathbf{U_{k k}}} \quad dla \quad k = n - 1, ..., 1
+\end{split}
+\end{equation}
+
+Wyznaczenie niewiadomych możemy wykonać \textit{in situ}, czyli bez alokacji dodatkowej pamięci na rozwiązanie układu. Rozwiązanie $x_{k}$ możemy przechowywać na miejscu $b_{k}$ w wektorze prawych stron $\mathbf{b}$. Nie będzie to wpływać na rozwiązani układu, gdyż wyznaczone wcześniej rozwiązania $x_{k}$ nie są modyfikowane przy wyliczaniu $x_{k - 1}$.
+\paragraph{}
+Znając podejście do metody eliminacji Gaussa zaadaptowanej dla specyficznej postaci macierzy $\mathbf{A}$ można podać teraz dokładnie różnice między wariantami algorytmu bez wyboru elementu głównego oraz z częściowym wyborem elementu głównego.
+Wariant z częściowym wyborem elementu głównego chroni przed wyborem zera lub wartości małej w porównaniu z innymi elementami wiersza jako elementu głównego. Aby wybrać element główny najpierw wyznaczana jest skala rzędu, czyli: 
+\begin{equation}
+s_{i} = \max_{1 \leq j \leq n} |a_{i j }| \quad dla \quad i = 1, ..., n
+\end{equation}
+Skalowalny wybór elementu głównego polega na wyborze w $k$-tej kolumnie elementu takiego, że $|a_{i k}| / s_{i}$ jest największy. Gdy znajdziemy taki element wykonujemy przestawienie rzędu $k$-tego i $i$-tego. Do przechowywania przestawień wykorzystywany jest wektor permutacji.
+Wariant ten różni się od wariantu bez wyboru elementu głównego zmianami we wzorach $(1)$ oraz $(2)$. W $(1)$ w mianowniku wykorzystujemy element $a_{p[k] k}$, który jest wybranym elementem głównym, zaś w $(2)$ zmieniają się zakres sumowania oraz indeksy rzędów. Zakres sumowania należy rozszerzyć do $min(n, p[k] + 2*l + 1)$, co wynika z przestawień rzędów i możliwości przesunięcia elementu niezerowego w rzędzie o $l$ kolumn. Indeksy rzędów zmieniają się natomiast z $i$-tego na $p[i]$-ty, gdyż musimy brać pod uwagę przestawienia rzędów wynikajace z wyborów elementów głównych.
+
+\paragraph{}
+Algorytm eliminacji Gaussa ze skalowalnym wyborem wierszy głównych jest następujący:
+
+\begin{center}
+	\begin{algorithmic}[1]
+	\Function{GaussElimination}{$A$, $b$, $n$, $l$}
+    	\State compute $s_{i} = \max_{1 \leq j \leq n} |a_{i j }|$ for $i = 1, ..., n$
+    	\For{$k = 1$ \textbf{to} $n - 1$}
+    		\State choose j such that $|a_{p[j] k}| / s_{i}$ is the largest in the column
+    		\State $p_{k} \longleftrightarrow p_{j}$
+    		\If{$k \mod l \leq l - 2 \lor k == n - 1$}
+    			\State $rows =  l - k \mod l$
+    		\Else
+    			\State $rows = 2*l - k \mod l$
+    		\EndIf
+    		\For{$i = k + 1$ \textbf{to} $k + rows$}
+    			\State $l_{p[i] k} = a_{p[i] k } / a_{p[k] k }$
+    			\State $a_{p[i] k} = 0$
+    			\If{$k + 2l \leq n$}
+    				\State $cols = 2l$
+    			\Else
+    				\State $cols = -k + n$
+    			\EndIf
+    			\For{$j = k + 1$ \textbf{to} $k + cols$}
+    				\State $a_{p[i] j} = a_{p[i] j} - l_{p[i] k} * a_{p[k] j}$
+    			\EndFor
+    			\State $b_{p[i]} = b_{p[i]} - l_{p[i] k} * b_{p[k]}$
+    		\EndFor
+    	\EndFor
+    	
+    	\State $b_{p[n]} = b_{p[n]} / a_{p[n] n}$
+    	\For{$i = n - 1$ \textbf{down to} $1$}
+    		\State $sum = b_{p[i]}$
+    		\State $offset = \min(n, p[i] + 2l + 1)$
+    		\For{$j = offset$ \textbf{down to} $i + 1$}
+    			\State $sum = sum - a_{p[i] j } * b_{p[j]}$
+    		\EndFor
+    		\State $b_{p[i]} = sum / a_{p[i] i}$
+    	\EndFor
+    	\State \Return $b$
+	\EndFunction
+	\end{algorithmic}
+\end{center}
+
+W linijkach \texttt{2 - 24} odbywa się sprowadzanie macierzy $\mathbf{A}$ do postaci macierzy górnotrójkątnej $\mathbf{U}$, zaś w linijkach \texttt{25 - 33} jest wyliczane rozwiązanie układu $\mathbf{Ux = c}$.
+Algorytm ten uogólnia się do wariantu bez wyboru elementu głównego dla $p[i] = i$ oraz odpowiednio zmienionych warunków pętli, podanych w powyższych akapitach.
+
+\subsubsection{Analiza złożoności}
+\paragraph{Złożoność obliczeniowa}
+Metoda eliminacji Gaussa bez wyboru elementu głównego wykonuje $n$ iteracji podczas sprowadzania macierzy $\mathbf{A}$ do postaci macierzy górnotrójkątnej $\mathbf{U}$. Dla każdej kolumny wykonywanych jest maksymalnie $l + 1$ odejmowań rzędów, a w każdym rzędzie należy odjąć od siebie co najwyżej $l + 1$ współczynników układu równań. Wyznaczanie macierzy $\mathbf{U}$ ma zatem złożoność $O(n * l^2)$. Rozwiązywanie układu równań $\mathbf{Ux = c}$ wymaga $n$ iteracji, w których każda odpowiada za wyznaczenie jednej zmiennej $x_{i}$. Do wyznaczenia zmiennej $x_{i}$ potrzeba kolejnych co najwyżej $l + 1$ iteracji po współczynnikach z macierzy $\mathbf{U}$. Złożoność metody eliminacji Gaussa bez wyboru elementu głównego to zatem $O(n * 2l + n * l)$, co przy założeniu, że $l$ jest stałą daje $O(n)$.
+
+\paragraph{}
+Metoda eliminacji Gaussa z częściowym wyborem elementu głównego wprowadza dodatkowe wymagania obliczenia skali dla każdego z rzędów macierzy $\mathbf{A}$ i wyboru elementu głównego. Obliczenie skali dla całej macierzy $\mathbf{A}$ wykonuje się w czasie $O(n)$, zaś wybór elementu w czasie $O(l + 1) = O(1)$, przy założeniu, że $l$ jest stałą. Również zwiększenie ilości kolumn, które trzeba od siebie odjąć przy odejmowaniu rzędów zwiększa złożoność jedynie o stałą, dlatego metoda eliminacji Gaussa z częściowym wyborem elementu głównego również ma złożoność $O(n)$.
+
+\paragraph{Złożoność pamięciowa}
+Dzięki regularności występowania elementów niezerowych w macierzy $\mathbf{A}$ można określić złożoność pamięciową algorytmu eliminacji Gaussa. Blok $\mathbf{A_{i}}$ ma co najwyżej $l^2$ elementów niezerowych, blok $\mathbf{B_{i}}$ ma co najwyżej $2*l$ elementów niezerowych, a blok $\mathbf{C_{i}}$ $l$ takich elementów. Mamy $v$ bloków $\mathbf{A_{i}}$ oraz $v - 1$ bloków $\mathbf{B_{i}}$ i $\mathbf{C_{i}}$. Przypomnijmy, że $v = n / l$. Reprezentacja macierzy wymaga zatem $O(v * (l^2 + 3l)) = O(n / l * (l^2 + 3l)) = O(nl)$. Wektor prawych stron $\mathbf{b}$ wymaga $O(n)$ pamięci. Obliczanie rozwiązania układu przeprowadzamy \textit{in situ}, zatem łącznie potrzebujemy $O(nl)$ pamięci dla algorytmu eliminacji Gaussa bez wyboru elementu głównego. Przy częściowym wyborze elementu głównego potrzebujemy również $O(n)$ pamięci na przechowywanie permutacji i $O(n)$ pamięci na skalę każdego z wierszy. Asymptotycznie daje to nam również złożoność pamięciową $O(nl)$.
+
+\subsubsection{Kwestie implementacyjne}
+\paragraph{}
+W języku programowania \texttt{Julia} zostały zaimplementowane funkcje \texttt{gaussian\_elimination!} dla wariantu bez wyboru elementu głównego oraz funkcja \texttt{gaussian\_elimination\_pivoting!} dla wariantu z częściowym wyborem elementu głównego. Do przechowywania macierzy rzadkiej $\mathbf{A}$ została użyta struktura \texttt{SparseMatrixCSC} z języka \texttt{Julia}, która pozwala na efektywne przechowywanie elementów niezerowych macierzy w formacie CSC (Compressed Sparse Column) i efektywny dostęp do nich. Funkcje te zostały umieszczone w module \texttt{blocksys}, dodatkowo wyposażonym w funkcje użytkowe pozwalające między innymi na wczytywanie macierzy wejściowych i wektorów prawych stron z pliku i zapis rozwiązań do pliku.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+Dla zaimplementowanych funkcji zostały stworzone programy testujące, które jako dane wejściowe przyjmowały dane wygenerowane przez funkcję \texttt{blockmat} z modułu \texttt{matrixgen}.
+
+\begin{center}
+\begin{tabular}{ | c | c | c || c | c | }
+  \hline
+   & \multicolumn{2}{| c ||}{Bez wyboru elementu głównego} & \multicolumn{2}{|c|}{Z wyborem elementu głównego}\\
+   \hline
+  $n$ & czas $(s)$ & $\delta$ (błąd względny) & czas $(s)$ & $\delta$ (błąd względny) \\
+  \hline
+  16 & 0.084066 & 9.836601059614785e-16 & 0.132196 & 6.787359152847496e-16 \\
+  10 000 & 0.157238 & 1.0083140309679606e-14 & 0.180174 & 5.401323443968982e-16\\
+  50 000 & 5.849069 & 1.9071532832302597e-13 & 6.274227 & 5.248824020867468e-16\\
+  \hline  
+\end{tabular}
+\end{center}
+
+Wyniki metody eliminacji Gaussa z częściowym wyborem elementu głównego charakteryzują się mniejszym błędem względnym. Mimo, że metoda ta wymaga nieznacznie większego nakładu czasowego to jest ona bezpieczna i bardziej dokładna.
+
+\subsection{Wnioski}
+\paragraph{}
+Metoda eliminacji Gaussa pozwala na rozwiązanie układu równań w postaci $\mathbf{Ax = b}$. Wariant z częściowym wyborem elementu głównego zabezpiecza przed wykorzystaniem elementu zerowego leżącego na przekątnej jako elementu głównego i chroni przed znaczną utratą dokładności w przypadku wybrania jako elementu głównego wartości małej co do modułu w porównaniu do pozostałych wartości w wierszu.
+
+\section{Zadanie drugie}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania była implementacja funkcji wyznaczającej rozkład $\mathbf{LU}$ macierzy $\mathbf{A}$ metodą eliminacji Gaussa, uwzględniającą specyficzną postać macierzy $\mathbf{A}$ dla wariantów bez wyboru elementu głównego oraz z częściowym wyborem elementu głównego.
+\subsection{Rozwiązanie}
+\subsubsection{Algorytm}
+\paragraph{}
+Eliminacja Gaussa jest równoważna rozkładowi macierzy $\mathbf{A}$ na iloczyn $\mathbf{A = LU}$, gdzie $\mathbf{L}$ jest macierzą trójkątną dolną mnożników, a $\mathbf{U}$ jest macierzą trójkątną górną, która jest macierzą wejściową przy wyliczaniu rozwiązania układu równań. Aby uzyskać rozkład $\mathbf{LU}$ należy wykonać algorytm analogiczny jak w zadaniu pierwszym, z wyłączeniem obliczania rozwiązania układu równań $\mathbf{Ux = c}$. Rozkład $\mathbf{LU}$ możemy wyznaczyć \textit{in situ}, zapamiętując mnożniki $l_{i k}$ na miejscach wyzerowanych współczynników w $k$-tym kroku algorytmu. Dla wariantu z częściowym wyborem elementu głównego wyjściowym rozkładem jest rozkład $\mathbf{LU}$ taki, że $\mathbf{PA = LU}$, gdzie $\mathbf{P}$ jest macierzą permutacji.
+
+\subsubsection{Analiza złożoności}
+\paragraph{Złożoność obliczeniowa}
+Złożoność obliczeniowa wyznaczania rozkładu $\mathbf{LU}$ jest identyczna jak pierwszy fragment algorytmu z pierwszego zadania. Jest to zatem $O(n)$, przy założeniu, że $l$ jest stałą.
+
+\paragraph{Złożoność pamięciowa}
+Pamięć potrzebna do wyznaczenia rozkładu $\mathbf{LU}$ jest identyczna jak pamięć potrzebna do eliminacji Gaussa na macierzy $\mathbf{A}$, jest to więc $O(nl)$, co zostało pokazane w analize złożoności w zadaniu pierwszym. Wyjściowy rozkład zajmuje dokładnie tyle pamięci, ile było potrzebne na przechowywanie macierzy rzadkiej $\mathbf{A}$.
+
+\subsubsection{Kwestie implementacyjne}
+\paragraph{}
+W języku programowania \texttt{Julia} zostały zaimplementowane funkcje \texttt{lufactorization!} dla wariantu bez wyboru elementu głównego oraz funkcja \texttt{lufactorization\_pivoting!} dla wariantu z częściowym wyborem elementu głównego. Do przechowywania macierzy rzadkiej $\mathbf{A}$ została użyta struktura \texttt{SparseMatrixCSC} z języka \texttt{Julia}, która pozwala na efektywne przechowywanie elementów niezerowych macierzy w formacie CSC (Compressed Sparse Column) i efektywny dostęp do nich. Funkcje te zostały umieszczone w module \texttt{blocksys}, dodatkowo wyposażonym w funkcje użytkowe pozwalające między innymi na wczytywanie macierzy wejściowych i wektorów prawych stron z pliku i zapis rozwiązań do pliku. Do efektywnego przechowywania rozkładu $\mathbf{LU}$ zostały stworzona macierz rzadka odpowiadające macierzy dolnotrójkątnej $\mathbf{L}$, zaś macierz $\mathbf{U}$ przechowywana jest na miejscu macierzy wejściowej $\mathbf{A}$. Są one zwracane jako wyniki funkcji. Aby pamięć zaalokowana, aby przechowywać rozkład $\mathbf{LU}$ była identyczna jak pamięć potrzebna do przechowywania macierzy $\mathbf{A}$, pod koniec algorytmu jest wywoływana metoda biblioteczna \texttt{dropzeros!}, które usuwa z macierzy rzadkiej elementy zerowe. Dzięki temu wyzerowane w macierzy $\mathbf{A = U}$ elementy zostają usunięte. W module \texttt{blocksys} zostały ponadto dołączone funkcje użytkowe pozwalające na zweryfikowanie poprawności rozkładu $\mathbf{LU}$. Funkcje \texttt{permuted} pozwala na nałożenie na pomnożenie macierzy przez macierz permutacji. Wywołanie \texttt{L * permuted(U, n, p)} da zatem macierz $\mathbf{A}$.
+
+\section{Zadanie trzecie}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania była implementacja funkcji rozwiązującej układ $\mathbf{Ax = b}$, jeśli wcześniej został już wyznaczony rozkład $\mathbf{LU}$ przez funkcję z poprzedniego zadania.
+\subsection{Rozwiązanie}
+\subsubsection{Algorytm}
+\paragraph{}
+Aby rozwiązać układ $\mathbf{Ax = b}$, jeśli wcześniej został już wyznaczony rozkład $\mathbf{LU}$ należy wykonać $\mathbf{Ly = b}$, a następnie $\mathbf{Ux = y}$. Wyliczenie $\mathbf{Ly = b}$ odpowiada aktualizacjom wektora prawych stron z metody eliminacji Gaussa, przy odejmowaniu rzędów. Jest to widoczne w linijce \texttt{22} w pseudokodzie przedstawionym w zadaniu pierwszym. Obliczenie $\mathbf{Ux = y}$ odpowiada natomiast fragmentowi algorytmu widocznego w linijkach \texttt{25 - 33} z pseudokodu z zadania pierwszego. Jest to więc podejście analogiczne jak w przypadku zadania pierwszego.
+
+\subsubsection{Analiza złożoności}
+\paragraph{Złożoność obliczeniowa}
+Do wyznaczenia $\mathbf{y}$ z układu $\mathbf{Ly = b}$ potrzebujemy $n$ iteracji, z których w każdej wykonamy co najwyżej $l + 1$ modyfikacji. Przy założeniu, że $l$ jest stałą daje to $O(n)$. Rozwiązanie $\mathbf{Ux = y}$ wykonuje się w czasie $O(n)$ co zostało pokazane w analizie złożoności w zadaniu pierwszym. Całościowo więc złożoność obliczeniowa rozwiązywana układu równań przy znanym rozkładzie $\mathbf{LU}$ to $O(n)$.
+
+\paragraph{Złożoność pamięciowa}
+Do rozwiązania układu równań $\mathbf{Ax = b}$ przy znanym rozkładzie  $\mathbf{LU}$ nie jest potrzebna dodatkowa pamięć. Wszystkie operacje na wektorze prawych stron wykonujemy \texttt{in situ}.
+
+
+\subsubsection{Kwestie implementacyjne}
+\paragraph{}
+W języku programowania \texttt{Julia} zostały zaimplementowane funkcje \texttt{solve\_linear\_system} dla wariantu bez wyboru elementu głównego oraz dla wariantu z częściowym wyborem elementu głównego. Funkcje różnią się jedynie sygnaturą. Funkcja dla częściowego wyboru elementu głównego przyjmuje dodatkowo permutację. W module \texttt{blocksys} została umieszczona funkcja służąca do testowania dwuetapowego \texttt{solve\_linear\_system!}. Jest to funkcja użytkowa operująca na zaimplementowanych już funkcjach \texttt{lufactorization!} oraz \texttt{solve\_linear\_system}.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+Dla zaimplementowanych funkcji zostały stworzone programy testujące, które jako dane wejściowe przyjmowały dane wygenerowane przez funkcję \texttt{blockmat} z modułu \texttt{matrixgen}.
+
+\begin{center}
+\begin{tabular}{ | c | c | c || c | c | }
+  \hline
+   & \multicolumn{2}{| c ||}{Bez wyboru elementu głównego} & \multicolumn{2}{|c|}{Z wyborem elementu głównego}\\
+   \hline
+  $n$ & czas $(s)$ & $\delta$ (błąd względny) & czas $(s)$ & $\delta$ (błąd względny) \\
+  \hline
+  16 & 0.339209 & 9.836601059614785e-16 & 0.000153 & 6.787359152847496e-16 \\
+  10 000 & 0.183928 & 1.0083140309679606e-14 & 0.209167 & 5.401323443968982e-16\\
+  50 000 & 6.252203 & 1.9071532832302597e-13 & 6.411412 & 5.248824020867468e-16\\
+  \hline  
+\end{tabular}
+\end{center}
+
+Wyniki działania funkcji \texttt{solve\_linear\_system!} są identyczne jak odpowiadające im wyniki metody eliminacji Gaussa z pierwszego zadania. Wynika to z tego, że są to algorytmy sobie równoważne.
+
+\end{document}

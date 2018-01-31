@@ -1,0 +1,325 @@
+\documentclass[a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{titling}
+\usepackage[polish]{babel}
+\selectlanguage{polish}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{framed}
+\usepackage{fullpage}
+
+\setlength{\droptitle}{+10em}
+\title{\huge
+  Obliczenia naukowe \\
+  \large Lista 1}
+\author{Arkadiusz Ziobrowski \\ 229728}
+\date{}
+
+\begin{document}
+\maketitle
+
+\pagebreak
+\section{Zadanie pierwsze}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania było wyznaczenie epsilonów maszynowych (\textit{macheps}), liczb \textit{eta} oraz liczb (\textit{MAX}) dla dostępnych w języku \texttt{Julia} typów zmiennopozycyjnych \texttt{Float16}, \texttt{Float32} i \texttt{Float64}.
+
+\subsection{Rozwiązanie}
+\paragraph{}
+\subparagraph{Wyznaczanie \textit{macheps}}
+Epsilon maszynowy to najmniejsza taka liczba, spełniająca dla danej arytmetyki następującą zależność:
+\begin{align*}
+	fl(1.0 + macheps) > 1.0
+\end{align*}
+Epsilon maszynowy wyznaczam wychodząc od wartości \texttt{1.0} i dzieląc ją w pętli przez \texttt{2.0} do momentu aż przedstawiona powyżej nierówność przestaje obowiązywać. Otrzymana w zmiennej liczba to właśnie \textit{macheps}.
+\subparagraph{Wyznaczanie \textit{eta}}
+Liczba \textit{eta} to najmniejsza taka liczba spełniająca dla danej arytmetyki następującą nierówność:
+\begin{align*}
+	eta > 0.0
+\end{align*}
+Wyznaczam ją dzieląc iteracyjnie zmienną o początkowej wartości \texttt{1.0} przez \texttt{2.0} dopóki powyższy warunek przestaje być spełniany. Otrzymana w ten sposób liczba to \textit{eta}.
+\subparagraph{Wyznaczanie \textit{MAX}}
+Liczba \textit{MAX} jest największą skończoną wartością, która da się przedstawić w danej arytmetyce. Wyznaczam ją iteracyjnie poprzez mnożenie zmiennej przez \texttt{2.0} do momentu aż warunek \texttt{isinf(zmienna)} nie zostanie spełniony. W tym przypadku pierwotną wartością zmiennej nie jest jeden, lecz liczba \texttt{prevfloat(1.0)}. Dobór takiej wartości wynika ze sposobu reprezentacji \texttt{1.0} w standardzie IEEE754. Mantysa jedynki składa się bowiem z samych zer, a wzięcie najmniejszej liczby mniejszej od jedynki spowoduje zapełnienie tej mantysy wyłącznie jedynkami. Mnożenie o dwa będzie przesuwać wówczas bity w cesze.
+\subsection{Wyniki i interpretacja}
+Wyniki działania zaimplementowanych przez mnie funkcji pokrywają się z wynikami działania funkcji z języka \texttt{Julia}.
+
+\subsubsection{\textit{Macheps}}
+
+\begin{center}
+ \begin{tabular}{ ||c | c | c | c||  }
+ \hline
+ \multicolumn{4}{|c|}{Wyniki \textit{macheps}} \\
+ \hline
+ Nazwa funkcji & \texttt{Float16} & \texttt{Float32}&\texttt{Float64}\\
+ \hline
+ \texttt{eps(::Float)} & 0.000977 & 1.1920929e-7 & 2.220446049250313e-16\\
+ \texttt{macheps} & 0.000977 & 1.1920929e-7 & 2.220446049250313e-16\\
+ \hline
+\end{tabular}
+\end{center}
+
+Dla porównania wartości z pliku nagłówkowego\texttt{float.h}  wynoszą dla arytmetyki \texttt{single}: \\1.1920928955078125e-7, zaś dla \texttt{double}:  2.220446049250313080847263336181640625e-16.
+
+\begin{framed}
+\textit{Macheps} uzyskujemy przez pomnożenie precyzji arytmetyki $\epsilon$ przez dwa. Przykładowo dla arymetyki \texttt{double} epsilon maszynowy wynosi $2^{-52}$, a precyzja arytmetyki to $2^{-53}$. Poniższy eksperyment pokazuje zależność między epsilonem maszynowym, a precyzją arytmetyki \texttt{Float32}.
+\newline
+
+\small {
+\texttt{bits(prevfloat(Float32(1.0))}: 00111111011111111111111111111111
+\texttt{bits(Float32(1.0) - eps(Float32))}: 00111111011111111111111111111110
+\texttt{//odejmowanie epsilona maszynowego}
+\newline
+\texttt{bits(Float32(1.0) - Float32($2.0^{-24}$))}: 00111111011111111111111111111111 \texttt{//odejmowanie precyzji arytmetyki}
+\newline
+\texttt{bits(Float32(1.0) - Float32$(2.0^{-25}$))}: 00111111100000000000000000000000 \texttt{//odejmowanie liczby mniejszej od precyzji arytmetyki}
+}
+\end{framed}
+
+\subsubsection{\textit{Eta}}
+
+\begin{center}
+ \begin{tabular}{ ||c | c | c | c||  }
+ \hline
+ \multicolumn{4}{|c|}{Wyniki \textit{eta}} \\
+ \hline
+ Nazwa funkcji & \texttt{Float16} & \texttt{Float32}&\texttt{Float64}\\
+ \hline
+ \texttt{nextfloat(::Float(1.0))} & 6.0e-8 & 1.0e-45 & 5.0e-324\\
+ \texttt{eta} & 6.0e-8 & 1.0e-45 & 5.0e-324\\
+ \hline
+\end{tabular}
+\end{center}
+
+W zapisie bitowym \textit{eta} dla arytmetyki \texttt{single} wynosi: 
+\begin{center}
+\texttt{bits(eta32()))}: \texttt{00000000000000000000000000000001}
+\end{center}
+Jak widać jest to najmniejsza możliwa do zapisania liczba dodatnia. Jest w postaci nieznormalizowanej, co pokazują bity cechy, a wynosi ona dokładnie tyle ile \textit{$MIN_{sub}$}. 
+
+\subsubsection{\textit{MAX}}
+
+\begin{center}
+ \begin{tabular}{ ||c | c | c | c||  }
+ \hline
+ \multicolumn{4}{|c|}{Wyniki \textit{MAX}} \\
+ \hline
+ Nazwa funkcji & \texttt{Float16} & \texttt{Float32}&\texttt{Float64}\\
+ \hline
+ \texttt{realmax(::Float)} & 6.55e4 & 3.4028235e38 & 1.7976931348623157e308\\
+ \texttt{max} & 6.55e4 & 3.4028235e38 & 1.7976931348623157e308\\
+ \hline
+\end{tabular}
+\end{center}
+W zapisie bitowym \textit{MAX} dla arytmetyki \texttt{single} wynosi: 
+\begin{center}
+\texttt{bits(max32()))}: \texttt{01111111011111111111111111111111}
+\end{center}
+Jest to największa liczba, która da się przedstawić w danej arytmetyce.
+W implementacji języka C wartości dla arytmetyk \texttt{single} i \texttt{double} wynoszą:
+\begin{flushleft}
+\texttt{single}: 3.4028234663852885981170418348451692544e38\\
+\texttt{double}: 1797693134862315708145274237317043567980e308.
+\end{flushleft}  
+
+\section{Zadanie drugie}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania drugiego było sprawdzenie eksperymentalnie słuszności stwierdzenia, iż epsilon maszynowy można otrzymać obliczając $3 * (4/3 - 1) -1$ w arytmetyce zmiennopozycyjnej.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+Liczba otrzymana w wyniku zgadza się z wartością \textit{macheps} dla zadanych arytmetyk zmiennopozycyjnych. 
+
+\begin{center}
+\begin{tabular}{ |c|c| } 
+ \hline
+ $4.0 / 3.0$ & 0 01111111 01010101010101010101011 \\ 
+ $4.0 / 3.0 - 1.0$ & 0 01111101 01010101010101010101100 \\ 
+ $3.0 * (4.0 / 3.0 - 1.0)$ & 0 01111111 00000000000000000000001 \\
+ $3.0 * (4.0 / 3.0 - 1.0) - 1.0$ & 0 01101000 00000000000000000000000 \\ 
+ \hline
+\end{tabular}
+\end{center}
+
+W powyższej tabeli przedstawione zostało krokowe wykonanie wyrażenia zaproponowanego przez Kahana dla arytmetyki \texttt{single}. Liczba w ostatnim wierszu tabeli odpowiada epsilonowymi maszynowemu.
+
+\section{Zadanie trzecie}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania było sprawdzenie równomierności rozmieszczenia liczb zmiennopozycyjnych w przedziale $[1, 2]$ z krokiem $\delta = 2^{-52}$, a następnie zbadanie rozmieszczenia liczb w przedziałach $[1/2, 1]$ oraz $[2, 4]$.
+
+\subsection{Rozwiązanie}
+\paragraph{}
+Pierwsza liczba z zadanego przedziału jest zapamiętywana w zmiennej. W zmiennej również zapamiętywany jest stały krok dla arytmetyki \texttt{double}, czyli $\delta = 2^{-52}$. W pętli liczba z zadanego przedziału jest zwiększana o \texttt{k * $\delta$}, co jest implementacją wzoru: $x = 1 + k*\delta$. Mnożnik k jest zwiększany w każdym przejściu pętli. Oczekiwaną wartością mnożnika k jest $2^{52}$ po zakończeniu iterowania, czyli w momencie przekroczenia przez \texttt{x} liczby z końca przedziału. Gdy taka wartość jest osiągana to znaczy, iż liczby są równomiernie rozmieszczone w zadanym przedziale.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+Poniższa tabela przedstawia pierwsze przejścia pętli oraz przedostatni krok. 
+\begin{center}
+\begin{tabular}{ |c|c| } 
+ \hline
+ $1.0 + 0 * \delta$ & 0011111111110000000000000000000000000000000000000000000000000000 \\ 
+ $1.0 + 1 * \delta$ & 0011111111110000000000000000000000000000000000000000000000000001 \\ 
+ $1.0 + 2 * \delta$ & 0011111111110000000000000000000000000000000000000000000000000010 \\
+ $1.0 + 3 * \delta$ & 0011111111110000000000000000000000000000000000000000000000000011 \\
+ $1.0 + 4 * \delta$ & 0011111111110000000000000000000000000000000000000000000000000100 \\
+ $2.0 - \delta$ & 0011111111111111111111111111111111111111111111111111111111111111\\
+ \hline
+\end{tabular}
+\end{center}
+
+Jak widać bity zwiększają się o 1. W przedostatnim kroku cała mantysa jest zapełniona bitami o wartości 1 i kolejne dodanie $\delta$ spowoduje wyzerowanie mantysy i dodanie 1 do cechy. Żeby zmieniła się cecha do mantysy $\delta$ musi być dodana $2^{52}$ razy. Im bliżej 0.0 tym gęściej rozmieszczone są liczby.
+
+\subsection{Wnioski}
+\paragraph{}
+Dla przedziałów $[1/2, 1]$ oraz $[2, 4]$ otrzymane rozłożenie liczb jest także równomierne, jednakże dla $[1/2, 1]$ z powodu, iż przedział jest dwa razy mniejsze wynika, iż liczby są dwa razy gęściej rozłożone. Analogicznie dla przedziału $[2, 4]$ z uwagi, iż jest on dwa razy większy niż przedział $[1, 2]$ wynika, że liczby są tam dwa razy rzadziej rozmieszczone. 
+
+\section{Zadanie czwarte}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania było eksperymentalne znalezienie liczby nie spełniającej równania $x * (1/x) = 1$ dla $1 < x < 2$ oraz najmniejszej takiej liczby niespełniającej zadanego równania dla arytmetyki \texttt{double}.
+
+\subsection{Rozwiązanie}
+\paragraph{}
+Dla pierwszego przypadku, czyli znalezienia takiej anomalii w przedziale $(1, 2)$ zaczynamy przeszukiwanie od liczby \texttt{nextfloat(1.0)} i iterujemy po kolejnych \texttt{nextfloat} do momentu napotkania anomalii. W przypadku dojścia do krańca przedziału, czyli liczby \texttt{prevfloat(2.0)}, kończymy.
+
+Dla drugiego przypadku rozpoczynamy przeszukiwania od liczby \texttt{nextfloat(typemin(Float64))} i kończymy w \texttt{prevfloat(typemax(Float64))}.
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+Dla pierwszego przypadku znaleziona anomalia to:
+\begin{flushleft}
+\texttt{x = 1.000000057228997}\newline
+\texttt{bits(x) = 0011111111110000000000000000000000001111010111001011111100101010}
+\end{flushleft}
+
+Anomalia ta wynika ze sposobu reprezentacji liczb zmiennopozycyjnych. Przez skończoną liczbę bitów przeznaczonych na zapis mantysy wyniki nie mogą być dokładnie reprezentowane i są zaokrąglane, co z kolei rzutuje na dokładność obliczeń.
+
+Dla drugiego przypadku znaleziona anomalia wynosi:
+\begin{flushleft}
+\texttt{x = -1.7976931348623157e308}
+\end{flushleft} 
+\subsection{Wnioski}
+\paragraph{}
+Przy tworzeniu programów należy mieć na uwadze sposób reprezentacji liczb zmiennopozycyjnych. Podczas obliczeń na takich liczbach mogą pojawiać się błędy zaokrągleń, które mogą całkowicie zaburzyć wynik lub spowodować nieoczekiwane zachowanie programu. Przykładowo poprawne z matematycznego punktu widzenia wyrażenie $x * 1/x = 1$ nie musi być zawsze spełnione. Użycie takiego wyrażenia jako warunek instrukcji warunkowej może powodować trudne do wykrycia błędy.
+
+\section{Zadanie piąte}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania była implementacja różnych algorytmów liczenia iloczynu skalarnego dwóch wektorów, a następnie określenie, który z nich zwraca wyniki najbliższe wartości dokładnej iloczynu skalarnego.
+\subsection{Rozwiązanie}
+\paragraph{}
+Do wykonania zadania i określenia poprawności wyników zaimplementowałem (wyłączając zadane algorytmy) funkcje do liczenia błędu względnego, rzutowania typów wektorów oraz do rozbijania tablicy z wyliczonymi iloczynami na wartości nieujemne oraz ujemne.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+
+\begin{center}
+ \begin{tabular}{ ||c | c | c | c | c||  }
+ \hline
+ \multicolumn{5}{|c|}{Wyniki algorytmów} \\
+ \hline
+ Nazwa algorytmu & \texttt{Float32} & \texttt{Float64} & $\delta$(\texttt{Float32}) & $\delta$(\texttt{Float64})\\
+ \hline
+ Algorytm 1 & -0.4999443 & 1.0251881368296672e-10 & 4.9668057661282845e10 & 11.184955313981627\\
+ Algorytm 2 & -0.4543457 & -1.5643308870494366e-10 & 4.51379655800096e10 & 14.541186645165915\\
+ Algorytm 3 & -0.5 & 0.0 & 4.967359135306107e10 & 1.0\\
+ Algorytm 4 & -0.5 & 0.0 & 4.967359135306107e10 & 1.0\\
+ \hline
+\end{tabular}
+\end{center}
+
+Poprawna wartość iloczynu skalarnego dla zadanych wektorów wynosi: $-1.00657107000000 *10^{-11}$.
+
+Dla arytmetyki \texttt{double} algorytmy 3 i 4 zwracają 0.0, co oznacza że wektory są prostopadłe. W wynikach widoczny jest wpływ kolejności obliczeń. Dodawanie do siebie dwóch oddalonych wartości powoduje powstawanie dużych błędów.
+
+\subsection{Wnioski}
+\paragraph{}
+Poprzez zastosowanie różnych algorytmów, które sumują wartości w różnych kolejnościach można stwierdzić, że kolejność sumowania ma znaczenie. Faktycznie tak jest, gdyż następuje redukcja cyfr znaczących w przypadku dodawania do liczby dużej do małej.
+\section{Zadanie szóste}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania było określenie, która z funkcji $f(x) = sqrt(x^2 + 1) - 1$, $g(x) = x^2 / (sqrt(x^2 + 1) + 1)$ daje poprawne wyniki.
+
+\subsection{Rozwiązanie}
+\paragraph{}
+Rozwiązanie zadania polegało na implementacji powyższych funkcji w języku \texttt{Julia}, a następnie porównaniu ich wyników dla kolejnych iteracji, gdzie $x = 8^i, i = 1...15$. Już piętnaście iteracji wystarczyło, aby wygenerować znaczne błędy.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+
+\begin{center}
+ \begin{tabular}{ ||c | c | c ||  }
+ \hline
+ \multicolumn{3}{|c|}{Wartości funkcji} \\
+ \hline
+ i & wartość $f(8^i)$ & wartość $g(8^i)$\\
+ 1 & 0.0077822185373186414 & 0.0077822185373187065\\
+ 2 & 0.00012206286282867573 & 0.00012206286282875901\\
+ 3 & 1.9073468138230965e-6 & 1.907346813826566e-6\\
+ 4 & 2.9802321943606103e-8 & 2.9802321943606116e-8\\
+ 8 & 1.7763568394002505e-15 & 1.7763568394002489e-15\\
+ 9 & 0.0 & 2.7755575615628914e-17\\
+ 10 & 0.0 & 4.336808689942018e-19\\
+ 15 & 0.0 & 4.0389678347315804e-28\\
+ \hline
+ 
+\end{tabular}
+\end{center}
+
+W powyższej tabeli zostało przedstawione kilka iteracji wyliczania wartości funkcji. Jak widać od pewnego miejsca wartość funkcji $f(x)$ wynosi 0. Takie zaburzenie wartości funkcji wynika ze zjawiska utraty cyfr znaczących. Spowodowane to jest dla małych $x$ odejmowaniem bliskich liczb, a tym samym zmniejszeniem liczby cyfr znaczących. Dla bardzo małych x
+\begin{center}
+$sqrt(x^2 + 1) \approx 1$
+\end{center}
+co powoduje odjęcie liczby bliskiej 1.0 od 1.0.
+\subsection{Wnioski}
+\paragraph{}
+Zjawisko utraty cyfr znaczących mogliśmy wyeliminować odpowiednio przekształcając funkcję $f(x)$. Aby uniknąć zjawiska utraty cyfr znaczących nie należy odejmować od siebie bliskich liczb lub sumować liczb bardzo odległych od siebie.
+
+\section{Zadanie siódme}
+
+\subsection{Opis problemu}
+\paragraph{}
+Celem zadania było obliczenie przybliżonej wartości pochodnej funkcji $f(x)= sin(x) + cos(3x)$ w punkcie $x_0 = 1.0$ obliczanej przy użyciu ilorazu różnicowego, a następnie porównania otrzymanych wartości dla zmniejszających się $h = 2^{-n}, n = 1...54$ z wartościami dokładnymi. Należało również zbadać zachowanie przybliżonej wartości pochodnej dla zmniejszających się $h$.
+\subsection{Rozwiązanie}
+\paragraph{}
+Do rozwiązania zadania należało zaimplementować funkcję obliczającą przybliżoną wartość pochodnej funkcji w zależności od $h$. Żeby obliczyć błąd bezwzględny zaimplementowałem również funkcję obliczającą dokładną wartość pochodnej dla $x$, czyli: $f(x) = cos(x) - 3 * sin(3x)$.
+
+\subsection{Wyniki i interpretacja}
+\paragraph{}
+
+Dokładną wartością pochodnej funkcji $f(x)$ w punkcie $x_0 = 1.0$ jest 0.11694228168853815.
+
+\begin{center}
+ \begin{tabular}{ ||c | c | c ||  }
+ \hline
+ \multicolumn{3}{|c|}{Wartości funkcji} \\
+ \hline
+ n & approx $f'(x)$ & bład bezwzględny\\
+ 0 & 2.0179892252685967 & 1.9010469435800585\\
+ 1 & 1.8704413979316472 & 1.753499116243109\\
+ 2 & 1.1077870952342974 & 0.9908448135457593\\
+ 3 & 0.6232412792975817 & 0.5062989976090435\\
+ 38 & 0.116943359375 & 1.0776864618478044e-6\\
+ 39 & 0.11688232421875 & 5.9957469788152196e-5\\
+ 40 & 0.1168212890625 & 0.0001209926260381522\\
+ 52 & -0.5 & 0.6169422816885382\\
+ 53 &  0.0 & 0.11694228168853815\\
+ 54 &  0.0 & 0.11694228168853815\\
+ \hline
+
+\end{tabular}
+\end{center}
+
+ 
+ Na początku wraz ze zmniejszaniem się $h$ wartość pochodnej funkcji ze wzoru przybliżonego się poprawia względem wartości dokładnej. W okolicach iteracji 39 widać zaburzenie w wartości błędu bezwzględnego. Od tamtego miejsca wynik przybliżonej pochodnej funkcji pogarsza się zamiast poprawiać. Przy końcu iteracji wynik jest natomiast całkowicie błędny. Spowodowane jest to utratą cyfr znaczących. Za redukcję cyfr znaczących odpowiada wartość $1 + h$. W przypadku małych $h$ następuje dodanie wartości bardzo małej do 1.0, co powoduje powstawanie błędów.
+\subsection{Wnioski}
+\paragraph{}
+Ustalenie zbyt małego $h$ do wyliczania przybliżonej wartości pochodnej funkcji spowoduje redukcję cyfr znaczących przy obliczaniu $1 + h$. To natomiast wniesie duże błędy do wyniku. Przy obliczaniu wartości pochodnej w punkcie z ilorazu różnicowego należy zatem dobrać odpowiednio małe $h$, aby uzyskać dobrze przybliżony wynik, jednak na tyle duże, aby nie spowodować zaistnienia zjawiska redukcji cyfr znaczących.
+\end{document}
